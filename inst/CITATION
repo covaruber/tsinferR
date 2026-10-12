@@ -1,0 +1,23 @@
+bibentry(
+  bibtype = "Article",
+  key = "Kelleher2019",
+  title = "Inferring whole-genome histories in large population datasets",
+  author = c(
+    person("Jerome", "Kelleher"),
+    person("Yan", "Wong"),
+    person("Anthony W.", "Wohns"),
+    person("Chaimaa", "Fadil"),
+    person("Patrick K.", "Albers"),
+    person("Gil", "McVean")
+  ),
+  journal = "Nature Genetics",
+  year = 2019,
+  volume = 51,
+  number = 9,
+  pages = "1330--1338",
+  doi = "10.1038/s41588-019-0483-y",
+  header = paste(
+    "tsinferR is an R mirror of the tsinfer method. Please cite the",
+    "canonical tsinfer paper below when reporting results produced with tsinferR."
+  )
+)

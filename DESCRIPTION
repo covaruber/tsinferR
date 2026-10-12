@@ -1,0 +1,47 @@
+Package: tsinferR
+Type: Package
+Title: Infer Tree Sequences from Genetic Variation Data
+Version: 0.1.0
+Date: 2026-10-09
+Authors@R: c(
+    person("Giovanny", "Covarrubias-Pazaran", role = c("aut", "cre"),
+           email = "cova_ruber@live.com.mx",
+           comment = c(ORCID = "0000-0002-7194-3837")),
+    person("Tskit Developers", role = c("aut", "cph"),
+           comment = "Authors of the tsinfer, tskit and kastore libraries"),
+    person("Francesc", "Alted", role = "cph",
+           comment = "Author of the bundled c-blosc library"),
+    person("Yann", "Collet", role = "cph",
+           comment = "Author of the bundled LZ4 and Zstandard libraries"),
+    person("Meta Platforms, Inc. and affiliates", role = "cph",
+           comment = "Zstandard library"))
+Description: Native R mirror of the canonical 'tsinfer' method for inferring
+    tree sequences (ancestral recombination graphs) from genetic variation
+    data, as described in Kelleher et al. (2019) <doi:10.1038/s41588-019-0483-y>.
+    The package bundles the 'tsinfer' and 'tskit' C libraries and provides
+    the three-stage inference pipeline (ancestor generation, Li and Stephens
+    haplotype matching and post-processing), multi-threaded matching, a
+    built-in reader and writer for the 'Zarr' storage format used by VCF
+    Zarr ('VCZ') stores, and conversion of 'VCF' files to 'VCZ'. No 'Python'
+    installation is required.
+License: GPL-3 + file LICENSE
+URL: https://tskit.dev/tsinfer
+Encoding: UTF-8
+Depends: R (>= 4.0.0)
+Imports:
+    Rcpp (>= 1.0.0),
+    RcppTOML,
+    jsonlite
+LinkingTo:
+    Rcpp
+Suggests:
+    testthat (>= 3.0.0),
+    tskitR,
+    tsdateR,
+    knitr,
+    rmarkdown
+SystemRequirements: GNU make, C++17, zlib
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2
+NeedsCompilation: yes

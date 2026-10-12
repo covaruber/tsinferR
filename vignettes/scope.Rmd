@@ -1,0 +1,53 @@
+---
+title: "What tsinferR does"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{What tsinferR does}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`tsinferR` is an R mirror of the `tsinfer` method for inferring ancestral
+recombination graphs from large genetic-variation datasets. It is intended
+for R users who want the original tsinfer inference workflow without running
+Python. The algorithm and scientific interpretation are those of the
+canonical tsinfer work; `citation("tsinferR")` provides the recommended
+citation.
+
+## Scope
+
+The package has four connected parts:
+
+1. **VCF/VCZ input.** `vcf_to_vcz()` converts plain or gzip-compressed VCF
+   files to the Zarr v2 VCF-Zarr layout. The package's reader also accepts
+   supported local VCZ stores produced by other tools.
+2. **Inference.** `infer_ancestors()` constructs ancestral haplotypes,
+   `match_haplotypes()` matches ancestors and samples, and `post_process()`
+   cleans up the resulting genealogy. `run_tsinfer()` composes these stages.
+3. **Additional sites.** `augment_sites()` places additional variants on an
+   existing inferred genealogy using parsimony.
+4. **Tree-sequence handling.** Results are held as `tsinfer_ts` objects and
+   persisted in the interoperable `.trees` format. Tables can be inspected
+   directly or loaded by the companion `tskitR` package.
+
+## What it does not do
+
+`tsinferR` is not a general-purpose VCF analysis package, a population
+simulator, or a dating algorithm. It expects one-contig inference inputs and
+requires ancestral states. Remote Zarr stores are not currently supported.
+For node-age inference, pass a saved or in-memory result to `tsdateR` through
+`date_tsinfer()`. Simulation is outside this package's scope; use a separate
+R simulator or provide VCF/VCZ input.
+
+The C `tsinfer` and `tskit` libraries are bundled, and the Python orchestration
+has been reimplemented in R and C++. At the file boundary, outputs remain
+standard VCZ and `.trees` files, allowing use with R tools such as `tskitR`
+and `tsdateR`.
+
+## Citation and license
+
+`tsinferR` is licensed under GPL-3 or later, following the original tsinfer
+library. The complete license text and bundled-library notices are included
+with the package. The R mirror does not change the canonical scientific
+citation: please cite Kelleher et al. (2019), as returned by
+`citation("tsinferR")`.

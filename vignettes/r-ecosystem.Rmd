@@ -1,0 +1,77 @@
+---
+title: "Using tsinferR with tskitR and tsdateR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using tsinferR with tskitR and tsdateR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The companion R packages operate on the standard `.trees` format. The
+optional `tskitR` package can load and manipulate a tsinferR result, while
+`tsdateR` can assign ages to its nodes. tsinferR's adapters bridge through a
+temporary `.trees` file, so each package retains ownership of its own C
+pointers.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+if (!requireNamespace("tskitR", quietly = TRUE) ||
+    !requireNamespace("tsdateR", quietly = TRUE)) {
+  knitr::opts_chunk$set(eval = FALSE)
+}
+library(tsinferR)
+```
+
+## Infer and exchange a tree sequence
+
+```{r workflow}
+vcf <- system.file("extdata", "example.vcf.gz", package = "tsinferR")
+work <- file.path(tempdir(), "tsinferR-companions")
+dir.create(work, showWarnings = FALSE)
+samples <- vcf_to_vcz(vcf, file.path(work, "samples.vcz"), overwrite = TRUE)
+cfg <- tsinfer_config(
+  sources = list(tsinfer_source(samples, "samples")),
+  ancestral_state = ancestral_state(samples, is_reference = TRUE),
+  ancestors = list(ancestors_config("ancestors", file.path(work, "ancestors.vcz"), "samples")),
+  match = match_config(sources = list(
+    ancestors = match_source_config(node_flags = 0, create_individuals = FALSE),
+    samples = match_source_config()
+  )),
+  post_process = post_process_config()
+)
+ts <- run_tsinfer(cfg)
+```
+
+Convert to a `tskitR` `TreeSequence`, use its methods, then convert back:
+
+```{r tskit}
+r_ts <- as_tskit(ts)
+r_ts$num_trees
+r_ts$diversity()
+ts_roundtrip <- as_tsinfer(r_ts)
+ts_equals(ts, ts_roundtrip)
+```
+
+## Date with tsdateR
+
+`date_tsinfer()` invokes `tsdateR::date_ts()` on the standard file and returns
+the dated sequence as a new `tsinfer_ts`:
+
+```{r tsdate}
+dated <- date_tsinfer(ts, mutation_rate = 1e-8)
+head(ts_nodes(dated))
+```
+
+For direct control, the same file boundary can be used explicitly:
+
+```{r direct}
+path <- file.path(work, "inferred.trees")
+ts_dump(ts, path)
+t_to_date <- tsdateR::ts_load(path)
+dated_by_tsdateR <- tsdateR::date_ts(t_to_date, mutation_rate = 1e-8)
+tsdateR::ts_summary(dated_by_tsdateR)
+```
+
+```{r cleanup, include=FALSE}
+unlink(work, recursive = TRUE)
+```

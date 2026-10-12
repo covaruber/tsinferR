@@ -1,0 +1,130 @@
+---
+title: "Getting started with tsinferR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with tsinferR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`tsinferR` infers tree sequences (ancestral recombination graphs) from
+genetic variation data. It is a native R implementation of the
+[tsinfer](https://tskit.dev/tsinfer) pipeline: the compiled `tsinfer` and
+`tskit` C libraries are bundled with the package and no Python installation
+is needed.
+
+```{r}
+library(tsinferR)
+```
+
+## Input data: VCF Zarr
+
+The pipeline reads genotypes from VCF Zarr (VCZ) stores, the format written
+by [bio2zarr](https://sgkit-dev.github.io/bio2zarr/). `tsinferR` contains its
+own Zarr engine and a VCF converter, so a VCF file can be converted directly:
+
+```{r}
+vcf <- system.file("extdata", "example.vcf.gz", package = "tsinferR")
+work <- file.path(tempdir(), "tsinferR-vignette")
+dir.create(work, showWarnings = FALSE)
+samples <- vcf_to_vcz(vcf, file.path(work, "samples.vcz"), overwrite = TRUE)
+zarr_list(samples)
+dim(zarr_read(samples, "call_genotype"))
+```
+
+The example contains 5 diploid individuals. For real data, the
+ancestral alleles usually come from an INFO field (use
+`vcf_to_vcz(ancestral_info = "AA")`) or a separate store.
+
+## Configuring the pipeline
+
+A configuration describes the input sources, where to find the ancestral
+alleles, where to write the ancestors, and how each source is matched:
+
+```{r}
+cfg <- tsinfer_config(
+  sources = list(tsinfer_source(samples, name = "samples")),
+  ancestral_state = ancestral_state(samples, is_reference = TRUE),
+  ancestors = list(ancestors_config("ancestors", file.path(work, "ancestors.vcz"), "samples")),
+  match = match_config(sources = list(
+    ancestors = match_source_config(node_flags = 0, create_individuals = FALSE),
+    samples = match_source_config()
+  )),
+  post_process = post_process_config()
+)
+```
+
+The same configuration can be written as a TOML file (the format used by the
+`tsinfer` command-line tool) and read with `read_config()`.
+
+## Running the inference
+
+`run_tsinfer()` runs all stages:
+
+```{r}
+unlink(file.path(work, "ancestors.vcz"), recursive = TRUE)
+ts <- run_tsinfer(cfg, num_threads = 2)
+ts
+```
+
+The stages can also be run one by one:
+
+```{r}
+unlink(file.path(work, "ancestors.vcz"), recursive = TRUE)
+infer_ancestors(cfg$sources$samples, cfg$ancestors[[1]], cfg$ancestral_state)
+raw <- match_haplotypes(cfg)
+final <- post_process(raw, cfg)
+ts_equals(final, ts)
+```
+
+## Inspecting the result
+
+Tables are available as data frames, with JSON metadata decoded:
+
+```{r}
+nodes <- ts_nodes(ts)
+head(nodes[nodes$flags == 1, c("flags", "time", "individual")])
+nodes$metadata[[which(nodes$flags == 1)[1]]]
+ts_num_trees(ts)
+```
+
+The inferred tree sequence encodes the input genotypes exactly:
+
+```{r}
+G <- ts_genotype_matrix(ts)
+input <- zarr_read(samples, "call_genotype")
+pos <- zarr_read(samples, "variant_position")
+input <- matrix(aperm(input, c(1, 3, 2)), nrow = length(pos))
+inferred_sites <- match(ts_sites(ts)$position, pos)
+all(G == input[inferred_sites, ])
+```
+
+## Saving and interoperability
+
+Tree sequences are saved in the standard `.trees` format. The optional
+`tskitR` package can read the result directly:
+
+```{r, eval=requireNamespace("tskitR", quietly = TRUE)}
+path <- file.path(work, "inferred.trees")
+ts_dump(ts, path)
+tskit_sequence <- as_tskit(ts)
+tskit_sequence$num_trees
+ts_equals(ts, as_tsinfer(tskit_sequence))
+```
+
+With `tsdateR` installed, the inferred genealogy can also be dated using a
+mutation rate. `date_tsinfer()` handles the standard-file bridge and returns
+the dated result in tsinferR form:
+
+```{r, eval=requireNamespace("tsdateR", quietly = TRUE)}
+dated <- date_tsinfer(ts, mutation_rate = 1e-8)
+head(ts_nodes(dated))
+```
+
+```{r, include = FALSE}
+unlink(work, recursive = TRUE)
+```

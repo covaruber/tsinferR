@@ -1,0 +1,20 @@
+CXX_STD = CXX17
+
+PKG_CPPFLAGS = -I. -Itskit -Ikastore -Itsinfer -Iblosc -Ilz4 -Izstd \
+	-DTSI_NO_ATOMICS -DBLOSC_STRICT_ALIGN -DHAVE_LZ4 -DHAVE_ZLIB -DHAVE_ZSTD
+PKG_LIBS = -lz -pthread
+
+TSKIT_OBJECTS = tskit/core.o tskit/tables.o tskit/trees.o tskit/genotypes.o \
+	tskit/stats.o tskit/convert.o tskit/haplotype_matching.o kastore/kastore.o
+
+TSINFER_OBJECTS = tsinfer/ancestor_builder.o tsinfer/ancestor_matcher.o \
+	tsinfer/avl.o tsinfer/err.o tsinfer/tsi_blkalloc.o
+
+COMPRESS_OBJECTS = blosc_r.o blosc/blosclz.o blosc/shuffle.o \
+	blosc/shuffle-generic.o blosc/bitshuffle-generic.o blosc/fastcopy.o \
+	lz4/lz4.o lz4/lz4hc.o zstd/zstd.o
+
+CXX_OBJECTS = RcppExports.o common.o lowlevel.o tables.o codecs.o zarr.o zarr_r.o \
+	genotypes.o grouping.o ancestors.o match.o augment.o vcf.o
+
+OBJECTS = $(TSKIT_OBJECTS) $(TSINFER_OBJECTS) $(COMPRESS_OBJECTS) $(CXX_OBJECTS)
